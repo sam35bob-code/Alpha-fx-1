@@ -19,8 +19,14 @@ jobs:
       - name: Build APK
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
-          # Create debug keystore
           keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+          
+          # FIX: Generate gradlew if missing
+          if [ ! -f "./gradlew" ]; then
+            echo "gradlew missing - generating wrapper..."
+            gradle wrapper --gradle-version 8.7
+          fi
+          
           chmod +x ./gradlew
           ./gradlew assembleDebug --stacktrace
 
