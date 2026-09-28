@@ -9,25 +9,39 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Find project
-        run: |
-          ls -la
-          find . -name "gradlew" -type f
-          PROJECT_DIR=$(find . -name "gradlew" -type f | head -n 1 | xargs dirname)
-          if [ -z "$PROJECT_DIR" ]; then PROJECT_DIR="."; fi
-          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
-          echo "Using: $PROJECT_DIR"
-          ls -la $PROJECT_DIR
-
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build APK
+      - name: Extract and Build APK
         run: |
-          cd "${{ env.PROJECT_DIR }}"
+          set -x
+          pwd
+          ls -la
+          # Unzip if zip exists
+          if ls *.zip 1> /dev/null 2>&1; then
+            echo "Found zip, unzipping..."
+            unzip -o "*.zip" || unzip -o *.zip
+            ls -la
+          fi
+          if [ -f "alphafx (1).zip" ]; then
+            unzip -o "alphafx (1).zip"
+            ls -la
+          fi
+          # Find gradlew anywhere
+          echo "--- Searching gradlew ---"
+          find . -type f -name "gradlew" | head -20
+          GRADLEW_PATH=$(find . -type f -name "gradlew" | head -n 1)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "No gradlew! Listing all files:"
+            find . -maxdepth 4 -type f | head -100
+            exit 1
+          fi
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          echo "Building in: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
           chmod +x ./gradlew
           ./gradlew assembleDebug --stacktrace
 
@@ -36,5 +50,5 @@ jobs:
         with:
           name: AlphaFX-APK
           path: |
-            ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+            **/app/build/outputs/apk/debug/*.apk
             **/build/outputs/apk/debug/*.apk
