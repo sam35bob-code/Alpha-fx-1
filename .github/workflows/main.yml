@@ -6,46 +6,35 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Unzip if needed
+      - name: Find project
         run: |
-          if [ -f "alphafx (1).zip" ]; then
-            unzip -o "alphafx (1).zip" -d temp_extract
-            cp -r temp_extract/* . 2>/dev/null || cp -r temp_extract/*/* . 2>/dev/null || true
-          fi
-          if [ -f "alphafx.zip" ]; then
-            unzip -o "alphafx.zip" -d temp_extract
-            cp -r temp_extract/* . 2>/dev/null || true
-          fi
           ls -la
+          find . -name "gradlew" -type f
+          PROJECT_DIR=$(find . -name "gradlew" -type f | head -n 1 | xargs dirname)
+          if [ -z "$PROJECT_DIR" ]; then PROJECT_DIR="."; fi
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+          echo "Using: $PROJECT_DIR"
+          ls -la $PROJECT_DIR
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Make gradlew executable
-        run: |
-          find . -name gradlew -exec chmod +x {} \;
-
       - name: Build APK
         run: |
-          GRADLEW=$(find . -name gradlew -type f | head -n 1)
-          echo "Found: $GRADLEW"
-          cd $(dirname $GRADLEW)
-          ./gradlew assembleRelease --stacktrace || ./gradlew assembleDebug --stacktrace
+          cd "${{ env.PROJECT_DIR }}"
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AlphaFX-APK
           path: |
-            **/build/outputs/apk/**/*.apk
+            ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
+            **/build/outputs/apk/debug/*.apk
