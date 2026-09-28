@@ -1,0 +1,39 @@
+name: EXTRACT PROJECT
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Extract zip to repo
+        run: |
+          ls -la
+          unzip -o "alphafx (1).zip" -d .
+          # If zip created a subfolder, move its contents up
+          if [ -d "alphafx" ]; then mv alphafx/* . || true; fi
+          if [ -d "AlphaFX" ]; then mv AlphaFX/* . || true; fi
+          # Find nested app folder and bring it up
+          APP_PATH=$(find . -type f -name "build.gradle.kts" | grep app | head -n 1)
+          echo "Found $APP_PATH"
+          # If app is in subfolder like ./alphafx (1)/app, move everything to root
+          EXTRACTED_DIR=$(dirname $(dirname $APP_PATH))
+          echo "Root is $EXTRACTED_DIR"
+          if [ "$EXTRACTED_DIR" != "." ]; then
+            mv $EXTRACTED_DIR/* . || true
+            mv $EXTRACTED_DIR/.* . 2>/dev/null || true
+          fi
+          ls -la
+          ls -la app/ || true
+          rm -f "alphafx (1).zip"
+          rm -rf "alphafx (1)" || true
+
+      - name: Commit extracted files
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Extract AlphaFX project from zip"
