@@ -15,35 +15,37 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Extract and Build APK
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build APK
         run: |
           set -x
-          pwd
           ls -la
-          # Unzip if zip exists
-          if ls *.zip 1> /dev/null 2>&1; then
-            echo "Found zip, unzipping..."
-            unzip -o "*.zip" || unzip -o *.zip
-            ls -la
-          fi
+          # Make sure we unzip if zip still exists
           if [ -f "alphafx (1).zip" ]; then
-            unzip -o "alphafx (1).zip"
+            unzip -o "alphafx (1).zip" -d .
             ls -la
           fi
-          # Find gradlew anywhere
-          echo "--- Searching gradlew ---"
-          find . -type f -name "gradlew" | head -20
-          GRADLEW_PATH=$(find . -type f -name "gradlew" | head -n 1)
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "No gradlew! Listing all files:"
-            find . -maxdepth 4 -type f | head -100
-            exit 1
+          for f in *.zip; do
+            [ -e "$f" ] || continue
+            echo "Unzipping $f"
+            unzip -o "$f" -d .
+          done
+          ls -la
+          find . -maxdepth 3 -type f -name "gradlew" || echo "no gradlew"
+          # If gradlew exists use it, else use gradle
+          if [ -f "./gradlew" ]; then
+            chmod +x ./gradlew
+            ./gradlew assembleDebug --stacktrace
+          elif [ -f "*/gradlew" ]; then
+            GRADLEW=$(find . -name "gradlew" | head -n 1)
+            chmod +x "$GRADLEW"
+            $(dirname $GRADLEW)/gradlew assembleDebug --stacktrace || gradle assembleDebug --stacktrace
+          else
+            echo "Using system gradle"
+            gradle assembleDebug --stacktrace
           fi
-          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-          echo "Building in: $PROJECT_DIR"
-          cd "$PROJECT_DIR"
-          chmod +x ./gradlew
-          ./gradlew assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -52,3 +54,4 @@ jobs:
           path: |
             **/app/build/outputs/apk/debug/*.apk
             **/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/*.apk
