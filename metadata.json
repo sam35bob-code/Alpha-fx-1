@@ -1,0 +1,6 @@
+{
+  "name": "AlphaFX",
+  "description": "Disciplined Forex & Index trading terminal with real-time news ticker, Recharts market correlation visualizer (US30, EUR/USD, GBP/USD), AI setup push alerts, and 50/200 EMA + RSI reversal execution.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
